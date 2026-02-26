@@ -1379,75 +1379,6 @@ function downloadBlob(blob, filename) {
   URL.revokeObjectURL(url);
 }
 
-function createDemoDataset(days = 12) {
-  const mealTemplates = [
-    { description: "Greek yogurt + berries", carbEstimate: 28, proteinLevel: "moderate", fatLevel: "low", basePre: 94 },
-    { description: "Eggs + sourdough toast", carbEstimate: 32, proteinLevel: "high", fatLevel: "moderate", basePre: 96 },
-    { description: "Chicken salad wrap", carbEstimate: 42, proteinLevel: "moderate", fatLevel: "moderate", basePre: 98 },
-    { description: "Rice bowl + salmon", carbEstimate: 58, proteinLevel: "high", fatLevel: "moderate", basePre: 101 },
-    { description: "Lentil soup + crackers", carbEstimate: 47, proteinLevel: "moderate", fatLevel: "low", basePre: 97 },
-    { description: "Pasta + veggies", carbEstimate: 64, proteinLevel: "low", fatLevel: "low", basePre: 102 }
-  ];
-
-  const mealTimes = [7, 12, 19];
-  const demoMeals = [];
-  const demoFasting = [];
-
-  for (let dayOffset = days - 1; dayOffset >= 0; dayOffset -= 1) {
-    const date = new Date();
-    date.setHours(0, 0, 0, 0);
-    date.setDate(date.getDate() - dayOffset);
-
-    const dayIso = date.toISOString().slice(0, 10);
-    const fastingBase = 90 + ((dayOffset * 3) % 12);
-    demoFasting.push({
-      id: dayIso,
-      date: dayIso,
-      fastingGlucose: fastingBase
-    });
-
-    mealTimes.forEach((hour, mealIndex) => {
-      const template = mealTemplates[(dayOffset + mealIndex) % mealTemplates.length];
-      const mealDate = new Date(date);
-      mealDate.setHours(hour, 15 + mealIndex * 10, 0, 0);
-
-      const pre = template.basePre + ((dayOffset + mealIndex) % 6) - 2;
-      const spike = 24 + ((dayOffset * 7 + mealIndex * 11) % 52);
-      const peak = pre + spike;
-      const peakTime = 48 + ((dayOffset * 5 + mealIndex * 13) % 88);
-      const at2Hr = Math.max(pre + 2, peak - (20 + ((dayOffset + mealIndex) % 24)));
-      const returnTime = 72 + ((dayOffset * 9 + mealIndex * 7) % 120);
-      const includePostData = !((dayOffset + mealIndex) % 7 === 0);
-
-      const tags = [];
-      if ((dayOffset + mealIndex) % 3 === 0) tags.push("walk_after");
-      if ((dayOffset + mealIndex) % 4 === 0) tags.push("poor_sleep");
-      if ((dayOffset + mealIndex) % 5 === 0) tags.push("high_fiber");
-
-      demoMeals.push({
-        id: crypto.randomUUID(),
-        datetime: mealDate.toISOString(),
-        description: template.description,
-        carbEstimate: template.carbEstimate + ((dayOffset + mealIndex) % 8) - 3,
-        proteinLevel: template.proteinLevel,
-        fatLevel: template.fatLevel,
-        preGlucose: pre,
-        peakGlucose: includePostData ? peak : null,
-        peakTimeMinutes: includePostData ? peakTime : null,
-        glucoseAt2Hr: includePostData ? at2Hr : null,
-        timeBackUnder120: includePostData ? returnTime : null,
-        notes: includePostData ? "Demo entry" : "Pending follow-up",
-        contextTags: tags
-      });
-    });
-  }
-
-  return {
-    meals: demoMeals.map((meal) => normalizeMealRecord(meal)),
-    fastingEntries: demoFasting.map((entry) => normalizeFastingEntry(entry)).filter(Boolean)
-  };
-}
-
 async function init() {
   try {
     if ("serviceWorker" in navigator) {
@@ -1472,14 +1403,7 @@ async function init() {
       .filter((entry) => entry && Calc.validateFastingInput(entry.fastingGlucose).length === 0);
     AppState.fastingCollapsed = AppState.fastingEntries.some((entry) => entry.date === getTodayDateIso());
 
-    if (!AppState.meals.length && !AppState.fastingEntries.length) {
-      const demoData = createDemoDataset(12);
-      await DB.bulkReplaceAll(demoData.meals, demoData.fastingEntries);
-      AppState.meals = demoData.meals;
-      AppState.fastingEntries = demoData.fastingEntries;
-    } else {
-      await DB.bulkReplaceAll(AppState.meals, AppState.fastingEntries);
-    }
+    await DB.bulkReplaceAll(AppState.meals, AppState.fastingEntries);
 
     setInputValue("fastingDate", getTodayDateIso());
     setInputValue("fastingGlucose", "");
