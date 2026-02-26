@@ -66,7 +66,8 @@ const elements = {
   exportCsvBtn: document.getElementById("exportCsvBtn"),
   exportJsonBtn: document.getElementById("exportJsonBtn"),
   importJsonInput: document.getElementById("importJsonInput"),
-  appMessage: document.getElementById("appMessage")
+  appMessage: document.getElementById("appMessage"),
+  resetLocalDataBtn: document.getElementById("resetLocalDataBtn")
 };
 
 const DB = {
@@ -963,6 +964,27 @@ function bindEvents() {
   elements.exportCsvBtn.addEventListener("click", () => exportCsvAll());
   elements.exportJsonBtn.addEventListener("click", () => exportJsonAll());
   elements.importJsonInput.addEventListener("change", importBackupFile);
+
+  elements.resetLocalDataBtn.addEventListener("click", async () => {
+    const acknowledgedBackup = confirm(
+      "This will permanently erase all local meals and fasting entries on this device.\n\nBefore continuing, export a backup from the Data tab.\n\nContinue?"
+    );
+    if (!acknowledgedBackup) return;
+
+    const confirmedWipe = confirm("Final confirmation: Reset ALL local data now?");
+    if (!confirmedWipe) return;
+
+    await DB.bulkReplaceAll([], []);
+    AppState.meals = [];
+    AppState.fastingEntries = [];
+    AppState.openEditors.clear();
+    AppState.fastingCollapsed = false;
+    clearMessage();
+    UI.renderMeals();
+    UI.renderFastingEntries();
+    UI.renderReports();
+    alert("Local data has been reset.");
+  });
 }
 
 function getFormValue(form, name) {
