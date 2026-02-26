@@ -10,7 +10,7 @@ This is a personal metabolic tracking tool focused on:
 - meaningful glucose response metrics
 - local-first privacy
 
-It is intentionally **not** a diet app (no calorie tracking, no macro breakdowns beyond carb estimate).
+It is intentionally **not** a diet app (no calorie tracking, no macro precision logging—just practical macro bands).
 
 ## Core workflow
 
@@ -20,8 +20,8 @@ It is intentionally **not** a diet app (no calorie tracking, no macro breakdowns
 
 2. **Stage 1: Pre-Meal Entry**
    - Meal description
-   - Carb estimate
-   - Protein level / fat level
+   - Carb band
+   - Protein band / fat band
    - Pre-meal glucose
 
 3. **Stage 2: Post-Meal Update (inline per meal)**

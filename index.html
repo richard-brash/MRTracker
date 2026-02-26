@@ -61,19 +61,43 @@
             <input id="description" name="description" type="text" maxlength="120" placeholder="e.g., Oatmeal + berries" required />
           </label>
 
-          <label>
-            Carb estimate (g)
-            <input id="carbEstimate" name="carbEstimate" type="text" inputmode="numeric" pattern="[0-9]*" required />
-          </label>
-
           <fieldset>
-            <legend>Protein level</legend>
-            <div id="proteinLevel" class="toggle-group" role="radiogroup" aria-label="Protein level"></div>
+            <legend>
+              Carbs per meal
+              <button
+                class="info-tooltip-btn"
+                type="button"
+                aria-label="Carb band reference"
+                title="Carb bands\nvery_low: 0–10g\nlow: 11–25g\nmoderate: 26–50g\nhigh: 51–75g\nvery_high: 76g+"
+              >ⓘ</button>
+            </legend>
+            <div id="carbBand" class="toggle-group" role="radiogroup" aria-label="Carb band"></div>
           </fieldset>
 
           <fieldset>
-            <legend>Fat level</legend>
-            <div id="fatLevel" class="toggle-group" role="radiogroup" aria-label="Fat level"></div>
+            <legend>
+              Protein per meal
+              <button
+                class="info-tooltip-btn"
+                type="button"
+                aria-label="Protein band reference"
+                title="Protein bands\nnone: 0–3g\nlow: 4–10g\nmoderate: 11–25g\nhigh: 26g+"
+              >ⓘ</button>
+            </legend>
+            <div id="proteinBand" class="toggle-group" role="radiogroup" aria-label="Protein band"></div>
+          </fieldset>
+
+          <fieldset>
+            <legend>
+              Fat per meal
+              <button
+                class="info-tooltip-btn"
+                type="button"
+                aria-label="Fat band reference"
+                title="Fat bands\nnone: 0–3g\nlow: 4–10g\nmoderate: 11–25g\nhigh: 26g+"
+              >ⓘ</button>
+            </legend>
+            <div id="fatBand" class="toggle-group" role="radiogroup" aria-label="Fat band"></div>
           </fieldset>
 
           <label>
@@ -102,7 +126,7 @@
                 <tr>
                   <th data-sort="datetime">Date</th>
                   <th data-sort="description">Description</th>
-                  <th data-sort="carbEstimate">Carbs</th>
+                  <th data-sort="carbBand">Carb Band</th>
                   <th data-sort="spikeMagnitude">Spike</th>
                   <th data-sort="timeBackUnder120">Duration</th>
                   <th>Category</th>
@@ -114,7 +138,7 @@
         </section>
 
         <section class="card">
-          <h3>Food Pattern Summary</h3>
+          <h3>Band Pattern Summary</h3>
           <div id="foodPatternSummary" class="summary-grid"></div>
         </section>
 

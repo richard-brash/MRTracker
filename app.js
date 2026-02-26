@@ -1,4 +1,26 @@
-const LEVELS = ["none", "low", "moderate", "high"];
+const CARB_BANDS = ["very_low", "low", "moderate", "high", "very_high"];
+const PROTEIN_FAT_BANDS = ["none", "low", "moderate", "high"];
+const BAND_LABELS = {
+  carb: {
+    very_low: "0–10g",
+    low: "11–25g",
+    moderate: "26–50g",
+    high: "51–75g",
+    very_high: "76g+"
+  },
+  protein: {
+    none: "0–3g",
+    low: "4–10g",
+    moderate: "11–25g",
+    high: "26g+"
+  },
+  fat: {
+    none: "0–3g",
+    low: "4–10g",
+    moderate: "11–25g",
+    high: "26g+"
+  }
+};
 const TAGS = [
   "walk_after",
   "poor_sleep",
@@ -20,8 +42,6 @@ const UNITS = {
 const MGDL_PER_MMOL = 18;
 const GLUCOSE_MIN = 40;
 const GLUCOSE_MAX = 400;
-const CARB_MIN = 0;
-const CARB_MAX = 300;
 const PEAK_TIME_MIN = 0;
 const PEAK_TIME_MAX = 180;
 const RETURN_TIME_MIN = 0;
@@ -47,8 +67,9 @@ const elements = {
     data: document.getElementById("tab-data"),
     settings: document.getElementById("tab-settings")
   },
-  proteinLevel: document.getElementById("proteinLevel"),
-  fatLevel: document.getElementById("fatLevel"),
+  carbBand: document.getElementById("carbBand"),
+  proteinBand: document.getElementById("proteinBand"),
+  fatBand: document.getElementById("fatBand"),
   preMealForm: document.getElementById("preMealForm"),
   fastingSection: document.getElementById("fastingSection"),
   fastingContent: document.getElementById("fastingContent"),
@@ -177,8 +198,14 @@ const Calc = {
       if (!values.description || !values.description.trim()) {
         errors.push("Meal description is required.");
       }
-      if (values.carbEstimate == null || !this.inRange(values.carbEstimate, CARB_MIN, CARB_MAX)) {
-        errors.push("Carb estimate must be between 0 and 300.");
+      if (!CARB_BANDS.includes(values.carbBand)) {
+        errors.push("Carb band is required.");
+      }
+      if (!PROTEIN_FAT_BANDS.includes(values.proteinBand)) {
+        errors.push("Protein band is required.");
+      }
+      if (!PROTEIN_FAT_BANDS.includes(values.fatBand)) {
+        errors.push("Fat band is required.");
       }
       if (values.preGlucose == null || !this.inRange(values.preGlucose, GLUCOSE_MIN, GLUCOSE_MAX)) {
         errors.push("Pre-meal glucose must be between 40 and 400.");
@@ -292,14 +319,24 @@ function roundNumber(value, decimals = 1) {
   return Math.round(value * factor) / factor;
 }
 
+function normalizeCarbBand(rawBand) {
+  if (CARB_BANDS.includes(rawBand)) return rawBand;
+  return "moderate";
+}
+
+function normalizeProteinFatBand(rawBand) {
+  if (PROTEIN_FAT_BANDS.includes(rawBand)) return rawBand;
+  return "none";
+}
+
 function normalizeMealRecord(rawMeal) {
   const normalized = {
     id: String(rawMeal.id || crypto.randomUUID()),
     datetime: new Date(rawMeal.datetime || Date.now()).toISOString(),
     description: String(rawMeal.description || "Untitled meal"),
-    carbEstimate: Calc.toNumberOrNull(rawMeal.carbEstimate),
-    proteinLevel: LEVELS.includes(rawMeal.proteinLevel) ? rawMeal.proteinLevel : "none",
-    fatLevel: LEVELS.includes(rawMeal.fatLevel) ? rawMeal.fatLevel : "none",
+    carbBand: normalizeCarbBand(rawMeal.carbBand),
+    proteinBand: normalizeProteinFatBand(rawMeal.proteinBand),
+    fatBand: normalizeProteinFatBand(rawMeal.fatBand),
     preGlucose: Calc.toNumberOrNull(rawMeal.preGlucose),
     peakGlucose: Calc.toNumberOrNull(rawMeal.peakGlucose),
     peakTimeMinutes: Calc.toNumberOrNull(rawMeal.peakTimeMinutes),
@@ -406,15 +443,17 @@ const UI = {
     elements.fastingToggle.setAttribute("title", collapsed ? "Expand fasting section" : "Collapse fasting section");
   },
 
-  initToggleGroup(container, name, selected) {
+  initToggleGroup(container, name, selected, bands, nutrientType) {
     container.innerHTML = "";
-    LEVELS.forEach((level) => {
+    bands.forEach((band) => {
       const button = document.createElement("button");
       button.type = "button";
-      button.className = `toggle-btn${level === selected ? " active" : ""}`;
-      button.dataset.value = level;
+      button.className = `toggle-btn${band === selected ? " active" : ""}`;
+      button.dataset.value = band;
       button.dataset.group = name;
-      button.textContent = level;
+      const title = formatBandName(band);
+      const range = BAND_LABELS[nutrientType]?.[band] ?? "";
+      button.innerHTML = `<span class="toggle-title">${title}</span><span class="toggle-range">${range}</span>`;
       container.appendChild(button);
     });
   },
@@ -440,7 +479,7 @@ const UI = {
             <div class="meal-row">
               <div class="meal-main">
                 <div class="title">${escapeHtml(meal.description)}</div>
-                <div class="meta">${dateText} · ${meal.carbEstimate}g carbs · Spike ${spikeText}</div>
+                <div class="meta">${dateText} · Carbs ${formatBandName(meal.carbBand)} · Spike ${spikeText}</div>
               </div>
               <button class="meal-toggle icon-btn" type="button" data-meal-id="${meal.id}" aria-label="${isOpen ? "Close post-meal form" : "Open post-meal form"}" title="${isOpen ? "Close" : "Update"}">${isOpen ? "✕" : "✎"}</button>
             </div>
@@ -583,7 +622,7 @@ const UI = {
           <tr>
             <td>${new Date(meal.datetime).toLocaleDateString()}</td>
             <td>${escapeHtml(meal.description)}</td>
-            <td>${meal.carbEstimate ?? "-"}</td>
+            <td>${formatBandName(meal.carbBand)}</td>
             <td>${meal.spikeMagnitude == null ? "-" : formatGlucose(meal.spikeMagnitude)}</td>
             <td>${meal.timeBackUnder120 ?? "-"}</td>
             <td>
@@ -597,32 +636,45 @@ const UI = {
   },
 
   renderFoodPatternSummary(meals) {
-    const grouped = groupBy(meals, (meal) => meal.description.trim().toLowerCase());
+    const grouped = groupBy(meals, (meal) => `${meal.carbBand}|${meal.proteinBand}|${meal.fatBand}`);
     const rows = Object.entries(grouped)
-      .map(([key, list]) => {
+      .map(([bandKey, list]) => {
         const withSpike = list.filter((m) => m.spikeMagnitude != null);
         const withReturn = list.filter((m) => m.timeBackUnder120 != null);
+        const withAuc = list.filter((m) => m.aucProxy != null);
         const avgSpike = average(withSpike.map((m) => m.spikeMagnitude));
         const avgReturn = average(withReturn.map((m) => m.timeBackUnder120));
+        const avgAuc = average(withAuc.map((m) => m.aucProxy));
+        const [carbBand, proteinBand, fatBand] = bandKey.split("|");
 
         return {
-          description: list[0].description,
+          carbBand,
+          proteinBand,
+          fatBand,
           tests: list.length,
           avgSpike,
-          avgReturn
+          avgReturn,
+          avgAuc
         };
       })
-      .sort((a, b) => b.tests - a.tests || a.description.localeCompare(b.description));
+      .sort(
+        (a, b) =>
+          b.tests - a.tests ||
+          a.carbBand.localeCompare(b.carbBand) ||
+          a.proteinBand.localeCompare(b.proteinBand) ||
+          a.fatBand.localeCompare(b.fatBand)
+      );
 
     elements.foodPatternSummary.innerHTML = rows.length
       ? rows
           .map(
             (row) => `
             <div class="summary-card">
-              <strong>${escapeHtml(row.description)}</strong>
+              <strong>Carb ${formatBandName(row.carbBand)} · Protein ${formatBandName(row.proteinBand)} · Fat ${formatBandName(row.fatBand)}</strong>
               <div>${row.tests} tests</div>
               <div>Avg spike: ${formatGlucose(row.avgSpike)} ${AppState.glucoseUnit}</div>
-              <div>Avg return: ${formatNumber(row.avgReturn)} min</div>
+              <div>Avg return time: ${formatNumber(row.avgReturn)} min</div>
+              <div>Avg AUC proxy: ${formatAuc(row.avgAuc)} ${aucUnitLabel()}</div>
             </div>
           `
           )
@@ -746,9 +798,9 @@ function baseChartOptions() {
   };
 }
 
-function getToggleSelection(container) {
+function getToggleSelection(container, options) {
   const active = container.querySelector(".toggle-btn.active");
-  return active ? active.dataset.value : LEVELS[0];
+  return active ? active.dataset.value : options[0];
 }
 
 function bindEvents() {
@@ -822,13 +874,17 @@ function bindEvents() {
     clearMessage();
 
     const description = valueOf("description").trim();
-    const carbEstimate = Calc.toNumberOrNull(valueOf("carbEstimate"));
+    const carbBand = getToggleSelection(elements.carbBand, CARB_BANDS);
+    const proteinBand = getToggleSelection(elements.proteinBand, PROTEIN_FAT_BANDS);
+    const fatBand = getToggleSelection(elements.fatBand, PROTEIN_FAT_BANDS);
     const preGlucose = fromDisplayGlucose(valueOf("preGlucose"));
 
     const validationErrors = Calc.validateMealInput(
       {
         description,
-        carbEstimate,
+        carbBand,
+        proteinBand,
+        fatBand,
         preGlucose,
         peakGlucose: null,
         peakTimeMinutes: null,
@@ -847,9 +903,9 @@ function bindEvents() {
       id: crypto.randomUUID(),
       datetime: new Date().toISOString(),
       description,
-      carbEstimate,
-      proteinLevel: getToggleSelection(elements.proteinLevel),
-      fatLevel: getToggleSelection(elements.fatLevel),
+      carbBand,
+      proteinBand,
+      fatBand,
       preGlucose,
       peakGlucose: null,
       peakTimeMinutes: null,
@@ -862,8 +918,9 @@ function bindEvents() {
     await DB.saveMeal(meal);
     AppState.meals.push(meal);
     elements.preMealForm.reset();
-    UI.initToggleGroup(elements.proteinLevel, "protein", "none");
-    UI.initToggleGroup(elements.fatLevel, "fat", "none");
+    UI.initToggleGroup(elements.carbBand, "carb", "moderate", CARB_BANDS, "carb");
+    UI.initToggleGroup(elements.proteinBand, "protein", "none", PROTEIN_FAT_BANDS, "protein");
+    UI.initToggleGroup(elements.fatBand, "fat", "none", PROTEIN_FAT_BANDS, "fat");
     UI.renderMeals();
   });
 
@@ -1030,9 +1087,9 @@ function exportCsvAll() {
     "mealPeriod",
     "complete",
     "description",
-    "carbEstimate",
-    "proteinLevel",
-    "fatLevel",
+    "carbBand",
+    "proteinBand",
+    "fatBand",
     "preGlucose",
     "peakGlucose",
     "peakTimeMinutes",
@@ -1076,9 +1133,9 @@ function exportCsvAll() {
       mealPeriod: null,
       complete: null,
       description: null,
-      carbEstimate: null,
-      proteinLevel: null,
-      fatLevel: null,
+      carbBand: null,
+      proteinBand: null,
+      fatBand: null,
       preGlucose: null,
       peakGlucose: null,
       peakTimeMinutes: null,
@@ -1245,9 +1302,9 @@ function extractFromCsvRows(rows) {
       id: row.id,
       datetime: row.datetime,
       description: row.description,
-      carbEstimate: row.carbEstimate,
-      proteinLevel: row.proteinLevel,
-      fatLevel: row.fatLevel,
+      carbBand: row.carbBand,
+      proteinBand: row.proteinBand,
+      fatBand: row.fatBand,
       preGlucose: row.preGlucose,
       peakGlucose: row.peakGlucose,
       peakTimeMinutes: row.peakTimeMinutes,
@@ -1276,9 +1333,9 @@ function sanitizeMealFromImport(input) {
     id: String(input.id || crypto.randomUUID()),
     datetime: new Date(input.datetime || Date.now()).toISOString(),
     description: String(input.description || "Untitled meal"),
-    carbEstimate: Calc.toNumberOrNull(input.carbEstimate),
-    proteinLevel: LEVELS.includes(input.proteinLevel) ? input.proteinLevel : "none",
-    fatLevel: LEVELS.includes(input.fatLevel) ? input.fatLevel : "none",
+    carbBand: input.carbBand,
+    proteinBand: input.proteinBand,
+    fatBand: input.fatBand,
     preGlucose: Calc.toNumberOrNull(input.preGlucose),
     peakGlucose: Calc.toNumberOrNull(input.peakGlucose),
     peakTimeMinutes: Calc.toNumberOrNull(input.peakTimeMinutes),
@@ -1324,6 +1381,14 @@ function average(list) {
 
 function formatNumber(value) {
   return value == null || Number.isNaN(value) ? "-" : String(value);
+}
+
+function formatBandName(value) {
+  if (!value) return "-";
+  return String(value)
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
 }
 
 function toDisplayGlucose(valueMgdl) {
@@ -1410,8 +1475,9 @@ async function init() {
     }
 
     UI.renderUnitState();
-    UI.initToggleGroup(elements.proteinLevel, "protein", "none");
-    UI.initToggleGroup(elements.fatLevel, "fat", "none");
+    UI.initToggleGroup(elements.carbBand, "carb", "moderate", CARB_BANDS, "carb");
+    UI.initToggleGroup(elements.proteinBand, "protein", "none", PROTEIN_FAT_BANDS, "protein");
+    UI.initToggleGroup(elements.fatBand, "fat", "none", PROTEIN_FAT_BANDS, "fat");
 
     await DB.init();
     const storedMeals = await DB.getAllMeals();

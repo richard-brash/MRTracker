@@ -162,6 +162,21 @@ legend,
   color: var(--muted);
 }
 
+legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.info-tooltip-btn {
+  min-height: 22px;
+  min-width: 22px;
+  padding: 0;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  line-height: 1;
+}
+
 input,
 textarea {
   width: 100%;
@@ -176,7 +191,7 @@ textarea {
 
 .toggle-group {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   gap: 8px;
 }
 
@@ -186,6 +201,19 @@ textarea {
   border: 1px solid var(--border);
   background: transparent;
   color: var(--text);
+}
+
+.toggle-btn .toggle-title {
+  display: block;
+  font-size: 0.9rem;
+  line-height: 1.1;
+}
+
+.toggle-btn .toggle-range {
+  display: block;
+  font-size: 0.76rem;
+  opacity: 0.86;
+  margin-top: 2px;
 }
 
 .toggle-btn.active,
