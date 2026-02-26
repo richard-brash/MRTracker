@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f1115" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <title>Metabolic Response Tracker</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <div class="app">
+    <header class="app-header">
+      <h1>Metabolic Response Tracker</h1>
+      <p class="subtext">Fast meal logging + glucose response insights</p>
+    </header>
+
+    <nav class="tabs" aria-label="Main navigation">
+      <button class="tab-btn active" data-tab="log" type="button">Log</button>
+      <button class="tab-btn" data-tab="reports" type="button">Reports</button>
+      <button class="tab-btn" data-tab="data" type="button">Data</button>
+      <button class="tab-btn" data-tab="settings" type="button">Settings</button>
+    </nav>
+
+    <main>
+      <section id="tab-log" class="tab-panel active" aria-labelledby="log tab">
+        <p id="appMessage" class="subtext hidden" role="alert"></p>
+
+        <section class="card" id="fastingSection">
+          <div class="section-row">
+            <h2>Daily Fasting Glucose</h2>
+            <button id="fastingToggle" class="icon-btn" type="button" aria-label="Collapse fasting section" title="Collapse fasting section">▾</button>
+          </div>
+          <p id="fastingGateMessage" class="subtext"></p>
+          <div id="fastingContent">
+            <form id="fastingForm" class="form-grid fasting-grid" novalidate>
+              <label>
+                Date
+                <input id="fastingDate" type="date" required />
+              </label>
+
+              <label>
+                Fasting glucose (<span data-glucose-unit-label>mg/dL</span>)
+                <input id="fastingGlucose" type="text" inputmode="numeric" required />
+              </label>
+
+              <button class="primary" type="submit">Save Fasting</button>
+            </form>
+            <div id="fastingList" class="summary-grid"></div>
+          </div>
+        </section>
+
+        <h2>Stage 1: Pre-Meal Entry</h2>
+        <form id="preMealForm" class="card form-grid" novalidate>
+          <label>
+            Meal description
+            <input id="description" name="description" type="text" maxlength="120" placeholder="e.g., Oatmeal + berries" required />
+          </label>
+
+          <label>
+            Carb estimate (g)
+            <input id="carbEstimate" name="carbEstimate" type="text" inputmode="numeric" pattern="[0-9]*" required />
+          </label>
+
+          <fieldset>
+            <legend>Protein level</legend>
+            <div id="proteinLevel" class="toggle-group" role="radiogroup" aria-label="Protein level"></div>
+          </fieldset>
+
+          <fieldset>
+            <legend>Fat level</legend>
+            <div id="fatLevel" class="toggle-group" role="radiogroup" aria-label="Fat level"></div>
+          </fieldset>
+
+          <label>
+            Pre-meal glucose (<span data-glucose-unit-label>mg/dL</span>)
+            <input id="preGlucose" name="preGlucose" type="text" inputmode="numeric" required />
+          </label>
+
+          <button class="primary" type="submit">Save Meal</button>
+        </form>
+
+        <section class="list-section">
+          <h2>Meals</h2>
+          <p class="subtext">Each meal has its own inline Stage 2 update form.</p>
+          <div id="mealList" class="meal-list"></div>
+        </section>
+      </section>
+
+      <section id="tab-reports" class="tab-panel" aria-labelledby="reports tab">
+        <h2>Reports</h2>
+
+        <section class="card">
+          <h3>Meal Table</h3>
+          <div class="table-wrap">
+            <table id="mealReportTable">
+              <thead>
+                <tr>
+                  <th data-sort="datetime">Date</th>
+                  <th data-sort="description">Description</th>
+                  <th data-sort="carbEstimate">Carbs</th>
+                  <th data-sort="spikeMagnitude">Spike</th>
+                  <th data-sort="timeBackUnder120">Duration</th>
+                  <th>Category</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="card">
+          <h3>Food Pattern Summary</h3>
+          <div id="foodPatternSummary" class="summary-grid"></div>
+        </section>
+
+        <section class="card">
+          <h3>Time-of-Day Analysis</h3>
+          <div id="timeOfDaySummary" class="summary-grid"></div>
+        </section>
+
+        <section class="card chart-card">
+          <h3>Fasting Trend</h3>
+          <canvas id="fastingTrendChart" aria-label="Daily fasting glucose trend" role="img"></canvas>
+        </section>
+
+        <section class="card chart-card">
+          <h3>Spike Magnitude by Meal</h3>
+          <canvas id="spikeBarChart" aria-label="Spike magnitude by meal" role="img"></canvas>
+        </section>
+
+        <section class="card chart-card">
+          <h3>Average Daily Peak</h3>
+          <canvas id="dailyPeakChart" aria-label="Average daily peak" role="img"></canvas>
+        </section>
+
+        <section class="card chart-card">
+          <h3>Spike Category Histogram</h3>
+          <canvas id="categoryHistogram" aria-label="Spike category histogram" role="img"></canvas>
+        </section>
+      </section>
+
+      <section id="tab-data" class="tab-panel" aria-labelledby="data tab">
+        <h2>Data</h2>
+        <section class="card data-actions">
+          <p class="subtext">Each export contains all meals, fasting entries, and derived metrics.</p>
+          <button id="exportCsvBtn" class="primary" type="button">Export ALL Data (CSV)</button>
+          <button id="exportJsonBtn" type="button">Export ALL Data (JSON)</button>
+          <label class="file-input-label" for="importJsonInput">Import Backup (.csv or .json)</label>
+          <input id="importJsonInput" type="file" accept=".json,.csv,application/json,text/csv" />
+        </section>
+      </section>
+
+      <section id="tab-settings" class="tab-panel" aria-labelledby="settings tab">
+        <h2>Settings</h2>
+        <section class="card">
+          <h3>Glucose Unit</h3>
+          <div id="unitToggle" class="unit-toggle" role="radiogroup" aria-label="Glucose unit">
+            <button class="toggle-btn active" type="button" data-unit="mg/dL">mg/dL</button>
+            <button class="toggle-btn" type="button" data-unit="mmol/L">mmol/L</button>
+          </div>
+        </section>
+      </section>
+    </main>
+  </div>
+</body>
+</html>
